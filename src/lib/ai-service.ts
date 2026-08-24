@@ -137,7 +137,7 @@ export async function generateFinalCover(
     prompt,
     size: '1280x720',
     referenceImage: params.referenceImage,
-    strength: params.strength ?? 0.65,
+    strength: params.strength ?? 0.85,
     signal: options.signal,
     onProgress: options.onProgress,
   });
@@ -195,6 +195,8 @@ function buildFinalPrompt(params: {
   } else {
     parts.push(`主色调为${primaryColor}，配色和谐典雅`);
   }
+  // 强制强调配色优先级
+  parts.push('【重要】严格遵循上述配色方案，主色调必须贯穿整个画面，整体色调必须与主色${primaryColor}保持一致，不得偏离或改变色系');
 
   // 4. 元素
   if (confirmedElements.length > 0) {
@@ -277,7 +279,7 @@ export async function generateFinalCoverLegacy(
     prompt,
     size: '1280x720',
     referenceImage: options.referenceImage,
-    strength: options.strength ?? 0.6,
+    strength: options.strength ?? 0.85,
     signal: options.signal,
     onProgress: options.onProgress,
   });
