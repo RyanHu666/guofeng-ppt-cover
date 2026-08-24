@@ -82,7 +82,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [styleAnalysis, setStyleAnalysis] = useState<StyleAnalysis | null>(null);
   const [elements, setElements] = useState<ElementItem[]>([]);
   const [layouts, setLayouts] = useState<LayoutOption[]>([]);
-  const [finalCover, setFinalCover] = useState<FinalCover>(initialFinalCover);
+  const [finalCover, setFinalCover] = useState<FinalCover>(() => {
+    // 从 localStorage 恢复历史记录
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('cover-history');
+        if (saved) {
+          const history = JSON.parse(saved) as CoverHistoryItem[];
+          return { ...initialFinalCover, history };
+        }
+      } catch { /* ignore */ }
+    }
+    return initialFinalCover;
+  });
 
   // 是否可以跳转到某步骤
   const canGoToStep = useCallback(
@@ -185,9 +197,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         id: `hist_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         timestamp: Date.now(),
       };
+      const newHistory = [newItem, ...prev.history].slice(0, 20);
+      // 持久化到 localStorage
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('cover-history', JSON.stringify(newHistory));
+        }
+      } catch { /* ignore */ }
       return {
         ...prev,
-        history: [newItem, ...prev.history].slice(0, 20), // 最多保留20张
+        history: newHistory,
       };
     });
   }, []);

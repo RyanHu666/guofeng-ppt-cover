@@ -51,6 +51,7 @@ export function StepFinal() {
       const payload = data as { imageUrl?: string };
       if (payload?.imageUrl) {
         updateFinalCover({ imageUrl: payload.imageUrl, status: 'completed' });
+        addCoverHistory({ imageUrl: payload.imageUrl, strength: imgStrength });
       }
       setError(null);
     },
