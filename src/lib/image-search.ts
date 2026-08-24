@@ -1,4 +1,4 @@
-// 多源图片搜索 - 必应图片搜索 + Pixabay + 花瓣网
+// 多源图片搜索 - 必应图片搜索 + Pixabay + Pinterest（必应 site 限定）
 // 按优先级依次尝试，有结果就返回
 
 export interface SearchResultItem {
@@ -118,66 +118,43 @@ async function searchPixabay(keyword: string, page: number, perPage: number): Pr
   }
 }
 
-// ========== 花瓣网搜索（备选，不稳定） ==========
-const USER_AGENTS = [
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_2) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
-];
+// ========== Pinterest 搜索（通过必应图片 site 限定） ==========
+async function searchPinterest(keyword: string, page: number, perPage: number): Promise<SearchResult | null> {
+  const apiKey = process.env.BING_SEARCH_KEY;
+  if (!apiKey) return null;
 
-async function searchHuaban(keyword: string, page: number, perPage: number): Promise<SearchResult | null> {
-  const query = encodeURIComponent(`${keyword} 免扣 PNG 透明`);
-  const url = `https://huaban.com/search/?q=${query}&k=v32&type=pins&page=${page}&per_page=${perPage}`;
-  const userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+  const offset = (page - 1) * perPage;
+  // 用必应图片搜索限定站点为 pinterest.com，获取古风素材
+  const query = encodeURIComponent(`${keyword} chinese style site:pinterest.com`);
+  const url = `https://api.bing.microsoft.com/v7.0/images/search?q=${query}&count=${perPage}&offset=${offset}&size=large&mkt=zh-CN&safeSearch=Moderate`;
 
   try {
     const res = await fetch(url, {
-      headers: {
-        'User-Agent': userAgent,
-        'Accept': 'application/json, text/html',
-        'Accept-Language': 'zh-CN,zh;q=0.9',
-        'Referer': 'https://huaban.com/',
-      },
+      headers: { 'Ocp-Apim-Subscription-Key': apiKey },
     });
-
     if (!res.ok) return null;
 
-    const text = await res.text();
+    const data = await res.json();
+    const items: SearchResultItem[] = (data.value || []).map((img: any, i: number) => ({
+      id: `pinterest_${img.imageId || offset + i}`,
+      title: img.name || keyword,
+      thumbnailUrl: img.thumbnailUrl,
+      imageUrl: img.contentUrl,
+      source: 'pinterest',
+      sourceUrl: img.hostPageUrl || img.contentUrl,
+      width: img.width || 0,
+      height: img.height || 0,
+    }));
 
-    // 尝试直接解析 JSON
-    try {
-      const data = JSON.parse(text);
-      const pins = data?.pins || data?.query?.pins || [];
-      if (!Array.isArray(pins) || pins.length === 0) return null;
+    if (items.length === 0) return null;
 
-      const items: SearchResultItem[] = pins.map((pin: any) => {
-        const file = pin.file || {};
-        const imgKey = file.key;
-        const imgUrl = imgKey ? `https://gd-hbimg.huaban.com/${imgKey}` : '';
-        const thumbUrl = imgKey ? `https://gd-hbimg.huaban.com/${imgKey}_fw400webp` : '';
-        return {
-          id: `huaban_${pin.pin_id || pin.id}`,
-          title: pin.raw_text || pin.title || keyword,
-          thumbnailUrl: thumbUrl,
-          imageUrl: imgUrl,
-          source: 'huaban',
-          sourceUrl: `https://huaban.com/pins/${pin.pin_id || pin.id}`,
-          width: file.width || 0,
-          height: file.height || 0,
-        };
-      }).filter((item: SearchResultItem) => item.imageUrl);
-
-      return {
-        items,
-        total: items.length,
-        source: 'huaban',
-        keyword,
-        page,
-      };
-    } catch {
-      // 不是 JSON，可能是反爬页面
-      return null;
-    }
+    return {
+      items,
+      total: data.totalEstimatedMatches || items.length,
+      source: 'pinterest',
+      keyword,
+      page,
+    };
   } catch {
     return null;
   }
@@ -196,7 +173,7 @@ export async function searchImages(
   const sources = [
     { name: '必应图片', fn: () => searchBing(keyword, page, perPage) },
     { name: 'Pixabay', fn: () => searchPixabay(keyword, page, perPage) },
-    { name: '花瓣网', fn: () => searchHuaban(keyword, page, perPage) },
+    { name: 'Pinterest', fn: () => searchPinterest(keyword, page, perPage) },
   ];
 
   const errors: string[] = [];
