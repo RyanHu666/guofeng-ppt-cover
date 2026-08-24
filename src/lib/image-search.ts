@@ -171,9 +171,9 @@ export async function searchImages(
   }
 
   const sources = [
+    { name: 'Pinterest', fn: () => searchPinterest(keyword, page, perPage) },
     { name: '必应图片', fn: () => searchBing(keyword, page, perPage) },
     { name: 'Pixabay', fn: () => searchPixabay(keyword, page, perPage) },
-    { name: 'Pinterest', fn: () => searchPinterest(keyword, page, perPage) },
   ];
 
   const errors: string[] = [];
