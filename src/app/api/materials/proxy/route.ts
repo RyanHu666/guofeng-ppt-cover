@@ -18,6 +18,9 @@ export async function GET(request: NextRequest) {
     'cdn.pixabay.com',
     'huaban.com',
     'gd-hbimg.huaban.com',
+    'pinterest.com',
+    'i.pinimg.com',
+    'pinimg.com',
   ];
 
   try {
@@ -44,7 +47,7 @@ export async function GET(request: NextRequest) {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Referer: 'https://pixabay.com/',
+        Referer: 'https://www.pinterest.com/',
       },
       cache: 'force-cache',
     });
