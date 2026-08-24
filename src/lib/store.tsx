@@ -7,6 +7,7 @@ import type {
   ElementItem,
   LayoutOption,
   FinalCover,
+  CoverHistoryItem,
   StyleType,
 } from '@/lib/types';
 
@@ -47,6 +48,7 @@ interface AppState {
   // 最终封面（步骤5）
   finalCover: FinalCover;
   updateFinalCover: (updates: Partial<FinalCover>) => void;
+  addCoverHistory: (item: Omit<CoverHistoryItem, 'id' | 'timestamp'>) => void;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -71,6 +73,7 @@ const initialProjectInfo: ProjectInfo = {
 const initialFinalCover: FinalCover = {
   status: 'idle',
   imageToImageStrength: 0.5,
+  history: [],
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -175,6 +178,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setFinalCover((prev) => ({ ...prev, ...updates }));
   }, []);
 
+  const addCoverHistory = useCallback((item: Omit<CoverHistoryItem, 'id' | 'timestamp'>) => {
+    setFinalCover((prev) => {
+      const newItem: CoverHistoryItem = {
+        ...item,
+        id: `hist_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: Date.now(),
+      };
+      return {
+        ...prev,
+        history: [newItem, ...prev.history].slice(0, 20), // 最多保留20张
+      };
+    });
+  }, []);
+
   const value: AppState = {
     currentStep,
     steps: STEPS,
@@ -199,6 +216,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     selectedLayout,
     finalCover,
     updateFinalCover,
+    addCoverHistory,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

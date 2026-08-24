@@ -66,10 +66,18 @@ export interface LayoutOption {
   selected: boolean;
 }
 
+export interface CoverHistoryItem {
+  id: string;
+  imageUrl: string;
+  timestamp: number;
+  strength: number;
+}
+
 export interface FinalCover {
   status: GenerationStatus;
   imageUrl?: string;
   imageToImageStrength: number;
+  history: CoverHistoryItem[];
 }
 
 export interface GenerationProgress {

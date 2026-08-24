@@ -18,6 +18,7 @@ export function StepFinal() {
     elements,
     finalCover,
     updateFinalCover,
+    addCoverHistory,
     setCurrentStep,
   } = useApp();
 
@@ -35,6 +36,7 @@ export function StepFinal() {
         const payload = prog as unknown as { imageUrl?: string };
         if (payload.imageUrl) {
           updateFinalCover({ imageUrl: payload.imageUrl, status: 'completed' });
+          addCoverHistory({ imageUrl: payload.imageUrl, strength: imgStrength });
         }
         setError(null);
       } else if (prog.status === 'failed') {
@@ -106,11 +108,12 @@ export function StepFinal() {
   }, [taskId, disconnect, updateFinalCover]);
 
   // 下载背景图
-  const handleDownload = useCallback(() => {
-    if (!backgroundImage) return;
+  const handleDownload = useCallback((imgUrl?: string) => {
+    const url = imgUrl || backgroundImage;
+    if (!url) return;
     const link = document.createElement('a');
     link.download = `${projectInfo.name || '封面'}-${selectedLayout?.name || '方案'}.png`;
-    link.href = backgroundImage;
+    link.href = url;
     link.target = '_blank';
     link.click();
   }, [backgroundImage, projectInfo.name, selectedLayout?.name]);
@@ -218,7 +221,7 @@ export function StepFinal() {
             <div className="flex items-center gap-3">
               {backgroundImage && (
                 <button
-                  onClick={handleDownload}
+                  onClick={() => handleDownload()}
                   className="px-4 py-2 text-sm text-[#e0e0e0] border border-[#333333] rounded-md hover:bg-[#1a1a1a] transition-colors"
                 >
                   下载背景图
@@ -239,6 +242,50 @@ export function StepFinal() {
             </div>
           </div>
         </Card>
+
+        {/* 历史记录 */}
+        {finalCover.history.length > 0 && (
+          <Card className="mb-6">
+            <SectionTitle
+              title="历史记录"
+              description={`已生成 ${finalCover.history.length} 张，点击切换查看`}
+            />
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {finalCover.history.map((item, idx) => (
+                <div
+                  key={item.id}
+                  className={cn(
+                    'relative flex-shrink-0 w-32 aspect-video rounded-md overflow-hidden border-2 cursor-pointer transition-all group',
+                    backgroundImage === item.imageUrl
+                      ? 'border-[#c45c3b] shadow-lg shadow-[#c45c3b]/20'
+                      : 'border-[#2a2a2a] hover:border-[#444]',
+                  )}
+                  onClick={() => updateFinalCover({ imageUrl: item.imageUrl })}
+                >
+                  <img
+                    src={item.imageUrl}
+                    alt={`历史记录 ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownload(item.imageUrl);
+                      }}
+                      className="px-2 py-1 text-xs bg-[#c45c3b] text-white rounded"
+                    >
+                      下载
+                    </button>
+                  </div>
+                  <div className="absolute bottom-1 left-1 text-[10px] text-white/70 bg-black/50 px-1.5 py-0.5 rounded">
+                    #{idx + 1}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* 右侧：配置信息 */}
         <div className="space-y-5">
