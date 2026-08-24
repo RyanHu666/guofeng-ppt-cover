@@ -43,88 +43,92 @@ const PINTEREST_BOARDS: { keywords: string[]; url: string; name: string }[] = [
     url: 'https://www.pinterest.com/jievan515/%E6%95%A6%E7%85%8C.rss',
     name: '敦煌艺术',
   },
+  {
+    keywords: ['武侠', '墨色', '侠客', '江湖', '武术', '剑', '特效'],
+    url: 'https://www.pinterest.com/150f2554f01cb49/%E7%89%B9%E6%95%88-%E5%A2%A8%E8%89%B2-%E6%AD%A6%E4%BE%A0.rss',
+    name: '墨色武侠',
+  },
+  {
+    keywords: ['传统', '中式', '古典', '传统中式', '古代建筑', '古典园林'],
+    url: 'https://www.pinterest.com/david5647/%E4%BC%A0%E7%BB%9F%E4%B8%AD%E5%BC%8F.rss',
+    name: '传统中式',
+  },
+  {
+    keywords: ['神佛', '造像', '佛像', '菩萨', '观音', '神像', '雕塑'],
+    url: 'https://www.pinterest.com/lo2259737/%E7%A5%9E%E4%BD%9B-%E9%80%A0%E5%83%8F.rss',
+    name: '神佛造像',
+  },
 ];
 
-function matchBoard(keyword: string): string | null {
+function matchBoards(keyword: string): string[] {
   const kw = keyword.toLowerCase();
+  const matched: string[] = [];
   for (const board of PINTEREST_BOARDS) {
     for (const k of board.keywords) {
       if (kw.includes(k.toLowerCase())) {
-        return board.url;
+        matched.push(board.url);
+        break;
       }
     }
   }
-  return null;
+  // 如果没有匹配到，返回所有看板（尽量给结果）
+  if (matched.length === 0) {
+    return PINTEREST_BOARDS.map(b => b.url);
+  }
+  return matched;
 }
 
-async function searchPinterestBoards(
-  keyword: string,
-  page: number,
-  perPage: number,
-): Promise<SearchResult | null> {
-  const boardUrl = matchBoard(keyword);
-  if (!boardUrl) return null;
-
+async function fetchBoardRss(url: string): Promise<SearchResultItem[]> {
   try {
-    const res = await fetch(boardUrl, {
+    const res = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
         'Accept': 'application/rss+xml, text/xml',
       },
     });
-    if (!res.ok) return null;
+    if (!res.ok) return [];
 
     const text = await res.text();
-    // 解析 RSS，提取图片URL和链接
     const items: SearchResultItem[] = [];
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     let match;
     let index = 0;
 
-    while ((match = itemRegex.exec(text)) !== null && items.length < page * perPage) {
+    while ((match = itemRegex.exec(text)) !== null) {
       const itemXml = match[1];
-      
-      // 提取 title
-      const titleMatch = itemXml.match(/<title>([\s\S]*?)<\/title>/);
-      let title = titleMatch ? titleMatch[1].trim() : keyword;
-      // 去掉 CDATA 包裹
-      title = title.replace(/^<!\[CDATA\[/, '').replace(/\]\]>$/, '').trim() || keyword;
 
-      // 提取 link
+      const titleMatch = itemXml.match(/<title>([\s\S]*?)<\/title>/);
+      let title = titleMatch ? titleMatch[1].trim() : '';
+      title = title.replace(/^<!\[CDATA\[/, '').replace(/\]\]>$/, '').trim() || 'Pinterest素材';
+
       const linkMatch = itemXml.match(/<link>([\s\S]*?)<\/link>/);
       const sourceUrl = linkMatch ? linkMatch[1].trim() : '';
 
-      // 从 description 中提取图片（HTML 可能被转义）
       const descMatch = itemXml.match(/<description>([\s\S]*?)<\/description>/);
       let imageUrl = '';
       let thumbnailUrl = '';
-      
+
       if (descMatch) {
         let desc = descMatch[1];
-        // 去掉 CDATA
         desc = desc.replace(/^<!\[CDATA\[/, '').replace(/\]\]>$/, '');
-        // 反转义 HTML 实体
         desc = desc
           .replace(/&lt;/g, '<')
           .replace(/&gt;/g, '>')
           .replace(/&quot;/g, '"')
           .replace(/&amp;/g, '&')
           .replace(/&#39;/g, "'");
-        
-        // 提取第一个 img 的 src
+
         const imgMatch = desc.match(/<img[^>]+src="([^"]+)"/i);
         if (imgMatch) {
           thumbnailUrl = imgMatch[1];
-          // Pinterest 图片 URL 格式：https://i.pinimg.com/236x/xx/xx/xx/xxx.jpg
-          // 把 236x 换成 originals 获取原图
           imageUrl = thumbnailUrl.replace('/236x/', '/originals/');
         }
       }
 
       if (imageUrl) {
         items.push({
-          id: `pbt_${Date.now()}_${index}`,
-          title: title || keyword,
+          id: `pbt_${Date.now()}_${index}_${Math.random().toString(36).slice(2, 8)}`,
+          title,
           thumbnailUrl,
           imageUrl,
           source: 'pinterest-board',
@@ -135,23 +139,50 @@ async function searchPinterestBoards(
         index++;
       }
     }
-
-    // 分页
-    const start = (page - 1) * perPage;
-    const pageItems = items.slice(start, start + perPage);
-
-    if (pageItems.length === 0) return null;
-
-    return {
-      items: pageItems,
-      total: items.length,
-      source: 'pinterest-board',
-      keyword,
-      page,
-    };
+    return items;
   } catch {
-    return null;
+    return [];
   }
+}
+
+async function searchPinterestBoards(
+  keyword: string,
+  page: number,
+  perPage: number,
+): Promise<SearchResult | null> {
+  const boardUrls = matchBoards(keyword);
+  if (boardUrls.length === 0) return null;
+
+  // 并发拉取所有匹配的看板
+  const results = await Promise.all(
+    boardUrls.map(url => fetchBoardRss(url))
+  );
+
+  // 合并所有结果并打乱顺序（让不同看板的图穿插显示）
+  const allItems: SearchResultItem[] = [];
+  const maxLen = Math.max(...results.map(r => r.length));
+  for (let i = 0; i < maxLen; i++) {
+    for (const boardItems of results) {
+      if (i < boardItems.length) {
+        allItems.push(boardItems[i]);
+      }
+    }
+  }
+
+  // 分页
+  const total = allItems.length;
+  const start = (page - 1) * perPage;
+  const pageItems = allItems.slice(start, start + perPage);
+
+  if (pageItems.length === 0) return null;
+
+  return {
+    items: pageItems,
+    total,
+    source: 'pinterest-board',
+    keyword,
+    page,
+  };
 }
 
 // ========== Pinterest 必应 site 限定搜索 ==========

@@ -151,11 +151,13 @@ export function StepElements() {
     loadLibrary(cat);
   };
 
-  const loadMore = () => {
+  const loadMore = useCallback(() => {
+    if (loading) return;
+    if (searchResults.length >= searchTotal && searchTotal > 0) return;
     const nextPage = page + 1;
     setPage(nextPage);
     doSearch(searchKeyword, searchCategory, nextPage);
-  };
+  }, [loading, page, searchKeyword, searchCategory, searchResults.length, searchTotal, doSearch]);
 
   // 收藏到素材库
   const saveToLibrary = async (item: MaterialItem) => {
@@ -273,6 +275,28 @@ export function StepElements() {
 
   const items = activeTab === 'search' ? searchResults : libraryItems;
   const isSearchTab = activeTab === 'search';
+
+  // 滚动到底部自动加载更多
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isSearchTab) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      if (loading) return;
+      if (searchResults.length >= searchTotal && searchTotal > 0) return;
+      if (searchResults.length === 0) return;
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      if (scrollHeight - scrollTop - clientHeight < 200) {
+        loadMore();
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [isSearchTab, loading, searchResults.length, searchTotal, loadMore]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -459,15 +483,21 @@ export function StepElements() {
               ))}
             </div>
 
-            {/* 加载更多（只搜索页有） */}
-            {isSearchTab && !loading && searchResults.length < searchTotal && (
-              <div className="text-center mt-6">
-                <button
-                  onClick={loadMore}
-                  className="px-6 py-2 bg-[var(--ink-mid)] text-[var(--silver)] rounded-lg text-sm hover:bg-[var(--ink-mid)]/80 transition-colors"
-                >
-                  加载更多
-                </button>
+            {/* 加载更多 / 没有更多了 */}
+            {isSearchTab && searchResults.length > 0 && (
+              <div className="text-center mt-6 mb-4">
+                {searchResults.length >= searchTotal ? (
+                  <p className="text-sm text-[var(--ink-light)]">—— 没有更多了 ——</p>
+                ) : loading ? (
+                  <p className="text-sm text-[var(--silver)]">加载中...</p>
+                ) : (
+                  <button
+                    onClick={loadMore}
+                    className="px-6 py-2 bg-[var(--ink-mid)] text-[var(--silver)] rounded-lg text-sm hover:bg-[var(--ink-mid)]/80 transition-colors"
+                  >
+                    加载更多
+                  </button>
+                )}
               </div>
             )}
           </>
