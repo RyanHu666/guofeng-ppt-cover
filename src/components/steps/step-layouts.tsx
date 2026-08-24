@@ -125,6 +125,18 @@ export function StepLayouts() {
     }
   }, [layouts.length, initializeLayouts]);
 
+  // 进入此步骤时自动生成排版方案图片
+  useEffect(() => {
+    const allCompleted = layouts.length > 0 && layouts.every(l => l.status === 'completed');
+    const noneStarted = layouts.length > 0 && layouts.every(l => l.status === 'idle');
+    if (noneStarted && !isGenerating && projectInfo.referenceImages.length > 0) {
+      const timer = setTimeout(() => {
+        startGenerate();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [layouts, isGenerating, projectInfo.referenceImages.length, startGenerate]);
+
   const canProceed = canGoToStep('final');
   const completedCount = layouts.filter((l) => l.status === 'completed').length;
 

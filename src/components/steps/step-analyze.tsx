@@ -78,6 +78,21 @@ export function StepAnalyze() {
     }
   };
 
+  // 进入此步骤时自动开始分析
+  useEffect(() => {
+    if (
+      projectInfo.referenceImages.length > 0 &&
+      !styleAnalysis &&
+      !isAnalyzing &&
+      !error
+    ) {
+      const timer = setTimeout(() => {
+        startAnalysis();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [projectInfo.referenceImages.length, styleAnalysis, isAnalyzing, error, startAnalysis]);
+
   const canProceed = canGoToStep('elements');
 
   return (
