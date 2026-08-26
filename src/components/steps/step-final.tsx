@@ -251,12 +251,12 @@ export function StepFinal() {
               title="历史记录"
               description={`已生成 ${finalCover.history.length} 张，点击切换查看`}
             />
-            <div className="flex gap-3 overflow-x-auto pb-2">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {finalCover.history.map((item, idx) => (
                 <div
                   key={item.id}
                   className={cn(
-                    'relative flex-shrink-0 w-32 aspect-video rounded-md overflow-hidden border-2 cursor-pointer transition-all group',
+                    'relative aspect-video rounded-md overflow-hidden border-2 cursor-pointer transition-all group',
                     backgroundImage === item.imageUrl
                       ? 'border-[#c45c3b] shadow-lg shadow-[#c45c3b]/20'
                       : 'border-[#2a2a2a] hover:border-[#444]',
@@ -267,6 +267,10 @@ export function StepFinal() {
                     src={item.imageUrl}
                     alt={`历史记录 ${idx + 1}`}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // 图片加载失败就隐藏（URL可能过期了）
+                      (e.target as HTMLImageElement).style.opacity = '0.2';
+                    }}
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                     <button

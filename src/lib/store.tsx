@@ -83,13 +83,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [elements, setElements] = useState<ElementItem[]>([]);
   const [layouts, setLayouts] = useState<LayoutOption[]>([]);
   const [finalCover, setFinalCover] = useState<FinalCover>(() => {
-    // 从 localStorage 恢复历史记录
+    // 从 localStorage 恢复历史记录，并清理过期的（3天）
     if (typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('cover-history');
         if (saved) {
           const history = JSON.parse(saved) as CoverHistoryItem[];
-          return { ...initialFinalCover, history };
+          const now = Date.now();
+          const EXPIRE_MS = 3 * 24 * 60 * 60 * 1000;
+          const valid = history.filter(h => now - h.timestamp < EXPIRE_MS);
+          // 如果有过期的被清掉了，写回 localStorage
+          if (valid.length !== history.length) {
+            localStorage.setItem('cover-history', JSON.stringify(valid));
+          }
+          return { ...initialFinalCover, history: valid };
         }
       } catch { /* ignore */ }
     }
@@ -192,12 +199,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addCoverHistory = useCallback((item: Omit<CoverHistoryItem, 'id' | 'timestamp'>) => {
     setFinalCover((prev) => {
+      // 去重：同一张图URL一样就不加了
+      if (prev.history.some(h => h.imageUrl === item.imageUrl)) {
+        return prev;
+      }
+      const now = Date.now();
+      // 有效期3天，过期的自动清掉
+      const EXPIRE_MS = 3 * 24 * 60 * 60 * 1000;
+      const validHistory = prev.history.filter(h => now - h.timestamp < EXPIRE_MS);
       const newItem: CoverHistoryItem = {
         ...item,
-        id: `hist_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        timestamp: Date.now(),
+        id: `hist_${now}_${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: now,
       };
-      const newHistory = [newItem, ...prev.history].slice(0, 20);
+      const newHistory = [newItem, ...validHistory].slice(0, 20);
       // 持久化到 localStorage
       try {
         if (typeof window !== 'undefined') {
