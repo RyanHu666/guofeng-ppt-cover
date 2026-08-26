@@ -7,9 +7,6 @@ import { LayoutPlaceholder } from '../layout-placeholder';
 import type { LayoutOption } from '@/lib/types';
 import {
   LayoutGrid,
-  Play,
-  Square,
-  RefreshCw,
   Check,
   Eye,
   X,
@@ -50,10 +47,6 @@ export function StepLayouts() {
     setCurrentStep,
   } = useApp();
 
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [message, setMessage] = useState('');
-  const [currentIdx, setCurrentIdx] = useState(0);
   const [showPreview, setShowPreview] = useState<string | null>(null);
   const [previewLayout, setPreviewLayout] = useState<LayoutOption | null>(null);
 
@@ -65,53 +58,14 @@ export function StepLayouts() {
       name: template.name,
       description: template.description,
       thumbnailPrompt: '',
-      status: 'idle',
+      status: 'completed',
+      imageUrl: `layout-${template.id}-placeholder`,
       selected: false,
     }));
     setLayouts(initialLayouts);
   }, [layouts.length, setLayouts]);
 
-  // 用前端生成的占位图替代AI生图
-  const startGenerate = useCallback(() => {
-    initializeLayouts();
-    setIsGenerating(true);
-    setProgress(0);
-    setMessage('正在构建排版方案...');
-    setCurrentIdx(0);
 
-    // 重置为 idle
-    setLayouts(
-      layouts.map((l) => ({ ...l, status: 'idle' as const, imageUrl: undefined })),
-    );
-
-    // 模拟逐个生成的进度动画（每版 400ms）
-    let idx = 0;
-    const total = 4;
-
-    const tick = () => {
-      idx++;
-      setCurrentIdx(idx);
-      setProgress((idx / total) * 100);
-      setMessage(`正在生成第 ${idx} 版方案...`);
-
-      setLayouts((prev: LayoutOption[]) =>
-        prev.map((l, i) =>
-          i === idx - 1
-            ? { ...l, status: 'completed' as const, imageUrl: `layout-${idx}-placeholder` }
-            : l,
-        ),
-      );
-
-      if (idx < total) {
-        setTimeout(tick, 400);
-      } else {
-        setIsGenerating(false);
-        setMessage('排版方案生成完成');
-      }
-    };
-
-    setTimeout(tick, 400);
-  }, [layouts, setLayouts, initializeLayouts]);
 
   const handlePreview = (layout: LayoutOption) => {
     setPreviewLayout(layout);
@@ -125,20 +79,7 @@ export function StepLayouts() {
     }
   }, [layouts.length, initializeLayouts]);
 
-  // 进入此步骤时自动生成排版方案图片
-  useEffect(() => {
-    const allCompleted = layouts.length > 0 && layouts.every(l => l.status === 'completed');
-    const noneStarted = layouts.length > 0 && layouts.every(l => l.status === 'idle');
-    if (noneStarted && !isGenerating && projectInfo.referenceImages.length > 0) {
-      const timer = setTimeout(() => {
-        startGenerate();
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [layouts, isGenerating, projectInfo.referenceImages.length, startGenerate]);
-
   const canProceed = canGoToStep('final');
-  const completedCount = layouts.filter((l) => l.status === 'completed').length;
 
   return (
     <div>
@@ -156,62 +97,13 @@ export function StepLayouts() {
               <LayoutGrid className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-rice">4 版排版方案</h3>
+              <h3 className="text-base font-semibold text-rice">4 版预设排版方案</h3>
               <p className="text-xs text-silver">
-                {completedCount > 0
-                  ? `已生成 ${completedCount}/4 · ${selectedLayout ? `已选择：${selectedLayout.name}` : '请选择一个方案'}`
-                  : '几何结构示意，帮你快速选定版式'}
+                {selectedLayout ? `已选择：${selectedLayout.name}` : '几何结构示意，选择一个版式开始生成封面'}
               </p>
             </div>
           </div>
-
-          {!isGenerating && (
-            <button
-              onClick={startGenerate}
-              className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-cinnabar to-ochre px-5 py-2.5 text-sm font-medium text-rice shadow-lg shadow-cinnabar/20 transition-all hover:shadow-xl hover:shadow-cinnabar/30"
-            >
-              {completedCount > 0 ? (
-                <>
-                  <RefreshCw className="h-4 w-4" />
-                  重新生成
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4" />
-                  生成排版方案
-                </>
-              )}
-            </button>
-          )}
-
-          {isGenerating && (
-            <button
-              onClick={() => setIsGenerating(false)}
-              className="flex items-center gap-2 rounded-lg border border-cinnabar/30 bg-cinnabar/10 px-5 py-2.5 text-sm font-medium text-cinnabar transition-all hover:bg-cinnabar/20"
-            >
-              <Square className="h-4 w-4" />
-              停止
-            </button>
-          )}
         </div>
-
-        {/* 进度 */}
-        {isGenerating && (
-          <div className="mt-5">
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="text-silver">{message}</span>
-              <span className="text-terracotta font-medium">
-                {currentIdx}/4 · {Math.round(progress)}%
-              </span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-ink-dark">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-cinnabar to-ochre transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-        )}
       </Card>
 
       {/* 方案网格 */}
@@ -228,43 +120,29 @@ export function StepLayouts() {
           >
             {/* 图片区 */}
             <div className="relative aspect-video bg-ink-dark overflow-hidden">
-              {layout.status === 'completed' ? (
-                <>
-                  <LayoutPlaceholder layoutId={layout.id} primaryColor={projectInfo.primaryColor} />
-                  {/* 悬浮遮罩 */}
-                  <div className="absolute inset-0 bg-ink-darkest/60 opacity-0 transition-opacity group-hover:opacity-100 flex items-center justify-center gap-4">
-                    <button
-                      onClick={() => handlePreview(layout)}
-                      className="flex h-11 w-11 items-center justify-center rounded-full bg-rice/20 text-rice hover:bg-rice/30 transition-colors"
-                    >
-                      <Eye className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => selectLayout(layout.id)}
-                      className="flex h-11 w-11 items-center justify-center rounded-full bg-cinnabar/80 text-rice hover:bg-cinnabar transition-colors"
-                    >
-                      <Check className="h-5 w-5" />
-                    </button>
-                  </div>
+                <LayoutPlaceholder layoutId={layout.id} primaryColor={projectInfo.primaryColor} />
+                {/* 悬浮遮罩 */}
+                <div className="absolute inset-0 bg-ink-darkest/60 opacity-0 transition-opacity group-hover:opacity-100 flex items-center justify-center gap-4">
+                  <button
+                    onClick={() => handlePreview(layout)}
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-rice/20 text-rice hover:bg-rice/30 transition-colors"
+                  >
+                    <Eye className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => selectLayout(layout.id)}
+                    className="flex h-11 w-11 items-center justify-center rounded-full bg-cinnabar/80 text-rice hover:bg-cinnabar transition-colors"
+                  >
+                    <Check className="h-5 w-5" />
+                  </button>
+                </div>
 
-                  {/* 选中标记 */}
-                  {layout.selected && (
-                    <div className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-cinnabar shadow-lg shadow-cinnabar/30">
-                      <Check className="h-5 w-5 text-rice" />
-                    </div>
-                  )}
-                </>
-              ) : layout.status === 'generating' ? (
-                <div className="flex h-full flex-col items-center justify-center">
-                  <div className="h-10 w-10 animate-spin rounded-full border-2 border-cinnabar border-t-transparent mb-3" />
-                  <span className="text-sm text-silver">生成中...</span>
-                </div>
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center text-mossy">
-                  <LayoutGrid className="h-10 w-10 mb-2 opacity-50" />
-                  <span className="text-sm">待生成</span>
-                </div>
-              )}
+                {/* 选中标记 */}
+                {layout.selected && (
+                  <div className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-full bg-cinnabar shadow-lg shadow-cinnabar/30">
+                    <Check className="h-5 w-5 text-rice" />
+                  </div>
+                )}
 
               {/* 编号 */}
               <div className="absolute top-4 left-4 flex h-7 w-7 items-center justify-center rounded-md bg-ink-darkest/70 text-xs font-semibold text-rice backdrop-blur-sm">
@@ -281,14 +159,11 @@ export function StepLayouts() {
 
               <button
                 onClick={() => selectLayout(layout.id)}
-                disabled={layout.status !== 'completed'}
                 className={cn(
                   'w-full rounded-lg py-2.5 text-sm font-medium transition-all',
                   layout.selected
                     ? 'bg-cinnabar text-rice'
-                    : layout.status === 'completed'
-                      ? 'border border-ink-light text-silver hover:border-cinnabar/50 hover:text-cinnabar'
-                      : 'cursor-not-allowed border border-ink-dark bg-ink-dark/50 text-mossy',
+                    : 'border border-ink-light text-silver hover:border-cinnabar/50 hover:text-cinnabar',
                 )}
               >
                 {layout.selected ? '✓ 已选择此方案' : '选择此方案'}
