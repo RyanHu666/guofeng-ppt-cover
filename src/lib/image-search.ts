@@ -58,6 +58,26 @@ const PINTEREST_BOARDS: { keywords: string[]; url: string; name: string }[] = [
     url: 'https://www.pinterest.com/lo2259737/%E7%A5%9E%E4%BD%9B-%E9%80%A0%E5%83%8F.rss',
     name: '神佛造像',
   },
+  {
+    keywords: ['佛像', '佛', '佛陀', '禅意', '佛教'],
+    url: 'https://www.pinterest.com/iamtangsiwei/%E4%BD%9B%E5%83%8F.rss',
+    name: '佛像',
+  },
+  {
+    keywords: ['水墨', '肌理', '纹理', '材质', '笔触', '质感'],
+    url: 'https://www.pinterest.com/219278509b7fd7c324499149f8cbb3/%E6%B0%B4%E5%A2%A8%E8%82%8C%E7%90%86.rss',
+    name: '水墨肌理',
+  },
+  {
+    keywords: ['敦煌', '中国元素', '国风元素', '传统元素', '纹样', '图案'],
+    url: 'https://www.pinterest.com/magicsmile251/%E6%95%A6%E7%85%8C%E7%AD%89%E4%B8%AD%E5%9B%BD%E5%85%83%E7%B4%A0%E5%8F%82%E8%80%83.rss',
+    name: '敦煌等中国元素参考',
+  },
+  {
+    keywords: ['新中式', '装饰画', '挂画', '艺术画', '中式装饰'],
+    url: 'https://www.pinterest.com/ba95d01e09c7f1e/%E6%96%B0%E4%B8%AD%E5%BC%8F%E8%A3%85%E9%A5%B0%E7%94%BB.rss',
+    name: '新中式装饰画',
+  },
 ];
 
 function matchBoards(keyword: string): string[] {
