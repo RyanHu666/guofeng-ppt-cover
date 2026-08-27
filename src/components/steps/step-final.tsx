@@ -251,7 +251,7 @@ export function StepFinal() {
               title="历史记录"
               description={`已生成 ${finalCover.history.length} 张，点击切换查看`}
             />
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {finalCover.history.map((item, idx) => (
                 <div
                   key={item.id}
