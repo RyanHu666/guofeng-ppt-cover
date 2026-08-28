@@ -145,9 +145,10 @@ export function StepFinal() {
         stepNumber={5}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
+        {/* 左侧：封面预览 + 配置信息 */}
         {/* 左侧：封面预览区 */}
-        <Card className="mb-6">
+        <Card>
           <SectionTitle
             title="封面预览"
             description={`基于「${selectedLayout?.name || '未选择'}」方案${
@@ -244,56 +245,7 @@ export function StepFinal() {
           </div>
         </Card>
 
-        {/* 历史记录 */}
-        {finalCover.history.length > 0 && (
-          <Card className="mb-6">
-            <SectionTitle
-              title="历史记录"
-              description={`已生成 ${finalCover.history.length} 张，点击切换查看`}
-            />
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {finalCover.history.map((item, idx) => (
-                <div
-                  key={item.id}
-                  className={cn(
-                    'relative aspect-video rounded-md overflow-hidden border-2 cursor-pointer transition-all group',
-                    backgroundImage === item.imageUrl
-                      ? 'border-[#c45c3b] shadow-lg shadow-[#c45c3b]/20'
-                      : 'border-[#2a2a2a] hover:border-[#444]',
-                  )}
-                  onClick={() => updateFinalCover({ imageUrl: item.imageUrl })}
-                >
-                  <img
-                    src={item.imageUrl}
-                    alt={`历史记录 ${idx + 1}`}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      // 图片加载失败就隐藏（URL可能过期了）
-                      (e.target as HTMLImageElement).style.opacity = '0.2';
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDownload(item.imageUrl);
-                      }}
-                      className="px-2 py-1 text-xs bg-[#c45c3b] text-white rounded"
-                    >
-                      下载
-                    </button>
-                  </div>
-                  <div className="absolute bottom-1 left-1 text-[10px] text-white/70 bg-black/50 px-1.5 py-0.5 rounded">
-                    #{idx + 1}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {/* 右侧：配置信息 */}
-        <div className="space-y-5">
+        <div className="space-y-5 mt-6">
           {/* 已选方案 */}
           <Card>
             <SectionTitle title="已选方案" />
@@ -398,6 +350,54 @@ export function StepFinal() {
             </div>
           </Card>
         </div>
+
+        {/* 右侧：历史记录 */}
+        {finalCover.history.length > 0 && (
+          <Card>
+            <SectionTitle
+              title="历史记录"
+              description={`已生成 ${finalCover.history.length} 张，点击切换查看`}
+            />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {finalCover.history.map((item, idx) => (
+                <div
+                  key={item.id}
+                  className={cn(
+                    'relative aspect-video rounded-md overflow-hidden border-2 cursor-pointer transition-all group',
+                    backgroundImage === item.imageUrl
+                      ? 'border-[#c45c3b] shadow-lg shadow-[#c45c3b]/20'
+                      : 'border-[#2a2a2a] hover:border-[#444]',
+                  )}
+                  onClick={() => updateFinalCover({ imageUrl: item.imageUrl })}
+                >
+                  <img
+                    src={item.imageUrl}
+                    alt={`历史记录 ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // 图片加载失败就隐藏（URL可能过期了）
+                      (e.target as HTMLImageElement).style.opacity = '0.2';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownload(item.imageUrl);
+                      }}
+                      className="px-2 py-1 text-xs bg-[#c45c3b] text-white rounded"
+                    >
+                      下载
+                    </button>
+                  </div>
+                  <div className="absolute bottom-1 left-1 text-[10px] text-white/70 bg-black/50 px-1.5 py-0.5 rounded">
+                    #{idx + 1}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
       </div>
 
       <StepActions
