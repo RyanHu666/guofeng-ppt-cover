@@ -146,6 +146,7 @@ export function StepFinal() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
+        <div className="space-y-6">
         {/* 左侧：封面预览区 */}
         <Card className="mb-6">
           <SectionTitle
@@ -292,6 +293,8 @@ export function StepFinal() {
             </div>
           </Card>
         )}
+        </div>
+
         {/* 右侧：配置信息 */}
         <div className="space-y-5">
           {/* 已选方案 */}
